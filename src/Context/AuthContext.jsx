@@ -1,91 +1,84 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../services/api";
+import api from "../utils/api";
+import { useNavigate } from "react-router-dom";
+import LOCALSTORAGE_KEYS from "../constants/localstorage";
 
 const AuthContext = createContext();
 
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+function parseJwt(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("auth_user")) || null;
-    } catch {
-      return null;
-    }
-  });
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (token && !user) {
-      (async () => {
-        try {
-          const res = await api.get("/auth/me");
-          if (res?.data?.user) {
-            setUser(res.data.user);
-            localStorage.setItem("auth_user", JSON.stringify(res.data.user));
-          } else {
-            localStorage.removeItem("auth_token");
-            localStorage.removeItem("auth_user");
-          }
-        } catch (err) {
-          localStorage.removeItem("auth_token");
-          localStorage.removeItem("auth_user");
-        }
-      })();
+    const token = localStorage.getItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
+    if (token) {
+      api.setToken(token);
+      const payload = parseJwt(token);
+      if (payload) {
+        setUser({ id: payload.id, name: payload.name, email: payload.email });
+      } else {
+        setUser(null);
+      }
     }
+    setLoading(false);
   }, []);
 
-  const register = async ({ name, email, password }) => {
-    setLoading(true);
-    try {
-      await api.post("/auth/register", { username: name, email, password });
-      setLoading(false);
-      return { success: true };
-    } catch (err) {
-      setLoading(false);
-      const message = err?.message || "Error al registrar";
-      return { success: false, message };
+  const login = async (email, password) => {
+    const res = await api.post("/api/auth/login", { email, password });
+    const token = res?.data?.authorization_token || res?.authorization_token || res?.token;
+    if (token) {
+      localStorage.setItem(LOCALSTORAGE_KEYS.AUTH_TOKEN, token);
+      api.setToken(token);
+      const payload = parseJwt(token);
+      setUser(payload ? { id: payload.id, name: payload.name, email: payload.email } : {});
     }
+    return res;
   };
 
-  const login = async ({ email, password }) => {
-    setLoading(true);
-    try {
-      const res = await api.post("/auth/login", { email, password });
-      const token = res?.data?.token || res?.data?.authorization_token || res?.authorization_token;
-      if (!token) throw new Error("No se recibió token");
-      localStorage.setItem("auth_token", token);
-      const me = await api.get("/auth/me");
-      const u = me?.data?.user || null;
-      setUser(u);
-      localStorage.setItem("auth_user", JSON.stringify(u));
-      setLoading(false);
-      return { success: true, user: u };
-    } catch (err) {
-      setLoading(false);
-      const message = err?.message || "Credenciales inválidas";
-      return { success: false, message };
-    }
+  const register = async (payload) => {
+
+    const body = {
+      username: payload.name || payload.username || payload.email,
+      email: payload.email,
+      password: payload.password,
+    };
+    const res = await api.post("/api/auth/register", body);
+    return res;
   };
 
   const logout = () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
+    localStorage.removeItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
+    api.setToken(null);
     setUser(null);
+    navigate("/login");
   };
 
-  const value = {
-    user,
-    loading,
-    register,
-    login,
-    logout,
-  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  const forgotPassword = async (email) => api.post("/api/auth/forgot-password", { email });
+  const resetPassword = async (token, password) => api.post("/api/auth/reset-password", { reset_token: token, new_password: password });
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword }}>
+      {!loading ? children : <div>Cargando...</div>}
+    </AuthContext.Provider>
+  );
 }
