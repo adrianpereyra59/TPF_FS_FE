@@ -1,4 +1,7 @@
-const BASE = import.meta.env.VITE_APP_URL_API || "http://localhost:8080";
+const BASE =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_APP_URL_API ||
+  "http://localhost:8080";
 
 async function request(path, { method = "GET", body = null, raw = false } = {}) {
   const token = localStorage.getItem("auth_token");
@@ -7,7 +10,6 @@ async function request(path, { method = "GET", body = null, raw = false } = {}) 
   if (body !== null && !raw) {
     headers["Content-Type"] = "application/json";
   } else if (raw && body instanceof FormData) {
-    // allow browser to set Content-Type with boundary
   } else {
     headers["Content-Type"] = "application/json";
   }
