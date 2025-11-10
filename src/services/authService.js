@@ -10,10 +10,8 @@ export async function register(name, email, password) {
 
   try {
     const data = await api.post("/auth/register", usuario);
-    
     return data;
   } catch (err) {
-    
     const message = err?.message || "Error al registrar";
     throw new Error(message);
   }

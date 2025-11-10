@@ -1,15 +1,13 @@
 const BASE = import.meta.env.VITE_APP_URL_API || "http://localhost:8080";
 
-
 async function request(path, { method = "GET", body = null, raw = false } = {}) {
   const token = localStorage.getItem("auth_token");
   const headers = {};
 
-  
   if (body !== null && !raw) {
     headers["Content-Type"] = "application/json";
   } else if (raw && body instanceof FormData) {
-    
+    // allow browser to set Content-Type with boundary
   } else {
     headers["Content-Type"] = "application/json";
   }
@@ -23,26 +21,22 @@ async function request(path, { method = "GET", body = null, raw = false } = {}) 
   const init = {
     method,
     headers,
-    
     body: body !== null && !raw ? JSON.stringify(body) : body,
   };
 
   const res = await fetch(url, init);
 
-  
   const text = await res.text();
   let data;
   try {
     data = text ? JSON.parse(text) : {};
   } catch (e) {
-    
     data = text;
   }
 
   if (!res.ok) {
     const message = (data && data.message) || res.statusText || "Error en la petición";
     const err = new Error(message);
-    
     err.response = data;
     err.status = res.status;
     throw err;
@@ -56,7 +50,6 @@ export async function get(path) {
 }
 
 export async function post(path, body, opts = {}) {
- 
   return request(path, { method: "POST", body: body ?? null, raw: !!opts.raw });
 }
 
