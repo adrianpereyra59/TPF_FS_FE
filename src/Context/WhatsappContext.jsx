@@ -15,16 +15,15 @@ export function WhatsappProvider({ children }) {
   const [members, setMembers] = useState([]);
 
   const fetchContacts = async () => {
-    // TODO: implementar fetch real
+    // placeholder
     return [];
   };
 
   const getContact = (id) => contacts.find((c) => c.id === id) || null;
-
   const getMessages = (contactId) => messages.filter((m) => m.contactId === contactId);
 
   const fetchMembers = async (groupId) => {
-    // TODO: implementar fetch real
+    // placeholder
     return [];
   };
 

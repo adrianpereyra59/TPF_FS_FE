@@ -17,7 +17,7 @@ async function request(path, { method = "GET", body = null, raw = false } = {}) 
   const token = _AUTH_TOKEN || (typeof localStorage !== "undefined" ? localStorage.getItem("auth_token") : null);
   const headers = {};
 
-  if (body !== null && !raw) headers["Content-Type"] = "application/json"];
+  if (body !== null && !raw) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const url = `${BASE}/api${path.startsWith("/") ? path : "/" + path}`;
