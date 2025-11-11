@@ -1,27 +1,20 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../utils/api"; 
+import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
-import LOCALSTORAGE_KEYS from "../constants/localstorage";
 
 const AuthContext = createContext();
+const AUTH_KEY = "auth_token";
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export function useAuth() { return useContext(AuthContext); }
 
 function parseJwt(token) {
   try {
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
-    );
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
     return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return null; }
 }
 
 export function AuthProvider({ children }) {
@@ -30,30 +23,21 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
+    const token = localStorage.getItem(AUTH_KEY);
     if (token) {
       api.setToken(token);
       const payload = parseJwt(token);
-      if (payload) {
-        setUser({ id: payload.id, name: payload.name, email: payload.email });
-      } else {
-        setUser(null);
-      }
+      if (payload) setUser({ id: payload.id, name: payload.name, email: payload.email });
+      else setUser(null);
     }
     setLoading(false);
   }, []);
 
- 
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
-    const token =
-      res?.data?.authorization_token ||
-      res?.data?.token ||
-      res?.authorization_token ||
-      res?.token;
-
+    const token = res?.data?.authorization_token || res?.authorization_token || res?.token;
     if (token) {
-      localStorage.setItem(LOCALSTORAGE_KEYS.AUTH_TOKEN, token);
+      localStorage.setItem(AUTH_KEY, token);
       api.setToken(token);
       const payload = parseJwt(token);
       setUser(payload ? { id: payload.id, name: payload.name, email: payload.email } : {});
@@ -62,17 +46,12 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (payload) => {
-    const body = {
-      username: payload.name || payload.username || payload.email,
-      email: payload.email,
-      password: payload.password,
-    };
-    const res = await api.post("/auth/register", body);
-    return res;
+    const body = { username: payload.name || payload.username || payload.email, email: payload.email, password: payload.password };
+    return await api.post("/auth/register", body);
   };
 
   const logout = () => {
-    localStorage.removeItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(AUTH_KEY);
     api.setToken(null);
     setUser(null);
     navigate("/login");
@@ -81,9 +60,5 @@ export function AuthProvider({ children }) {
   const forgotPassword = async (email) => api.post("/auth/forgot-password", { email });
   const resetPassword = async (reset_token, new_password) => api.post("/auth/reset-password", { reset_token, new_password });
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword }}>
-      {!loading ? children : <div>Cargando...</div>}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword }}>{!loading ? children : <div>Cargando...</div>}</AuthContext.Provider>;
 }

@@ -1,56 +1,43 @@
-const BASE =
-  (import.meta.env.VITE_API_URL || import.meta.env.VITE_APP_URL_API || "http://localhost:8080")
-    .replace(/\/$/, "");
+const BASE = (import.meta.env.VITE_API_URL || "https://tpf-fs-be.vercel.app").replace(/\/$/, "");
 
 let _AUTH_TOKEN = null;
 
 export function setToken(token) {
   _AUTH_TOKEN = token;
   try {
-    if (token) {
-      localStorage.setItem("auth_token", token);
-    } else {
-      localStorage.removeItem("auth_token");
-    }
-  } catch (e) {
-  }
+    if (token) localStorage.setItem("auth_token", token);
+    else localStorage.removeItem("auth_token");
+  } catch (e) {}
 }
 
 async function request(path, { method = "GET", body = null, raw = false } = {}) {
   const token = _AUTH_TOKEN || (typeof localStorage !== "undefined" ? localStorage.getItem("auth_token") : null);
   const headers = {};
-
-  if (body !== null && !raw) {
-    headers["Content-Type"] = "application/json";
-  } else if (raw && body instanceof FormData) {
-  } else {
-    headers["Content-Type"] = "application/json";
-  }
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+  if (body !== null && !raw) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const url = `${BASE}/api${path.startsWith("/") ? path : "/" + path}`;
+  const init = { method, headers, body: body !== null && !raw ? JSON.stringify(body) : body };
 
-  const init = {
-    method,
-    headers,
-    body: body !== null && !raw ? JSON.stringify(body) : body,
-  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  init.signal = controller.signal;
 
-  const res = await fetch(url, init);
+  let res;
+  try {
+    res = await fetch(url, init);
+  } catch (err) {
+    clearTimeout(timeout);
+    throw new Error("Network error or request timed out");
+  }
+  clearTimeout(timeout);
 
   const text = await res.text();
   let data;
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch (e) {
-    data = text;
-  }
+  try { data = text ? JSON.parse(text) : {}; } catch (e) { data = text; }
 
   if (!res.ok) {
-    const message = (data && data.message) || res.statusText || "Error en la petición";
+    const message = (data && (data.message || data.msg)) || res.statusText || "Error en la petición";
     const err = new Error(message);
     err.response = data;
     err.status = res.status;
@@ -60,27 +47,9 @@ async function request(path, { method = "GET", body = null, raw = false } = {}) 
   return data;
 }
 
-export async function get(path) {
-  return request(path, { method: "GET" });
-}
+export async function get(path) { return request(path, { method: "GET" }); }
+export async function post(path, body, opts = {}) { return request(path, { method: "POST", body: body ?? null, raw: !!opts.raw }); }
+export async function put(path, body) { return request(path, { method: "PUT", body: body ?? null }); }
+export async function del(path) { return request(path, { method: "DELETE" }); }
 
-export async function post(path, body, opts = {}) {
-  return request(path, { method: "POST", body: body ?? null, raw: !!opts.raw });
-}
-
-export async function put(path, body) {
-  return request(path, { method: "PUT", body: body ?? null });
-}
-
-export async function del(path) {
-  return request(path, { method: "DELETE" });
-}
-
-export default {
-  request,
-  get,
-  post,
-  put,
-  del,
-  setToken,
-};
+export default { request, get, post, put, del, setToken };
