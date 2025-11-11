@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../utils/api"; 
+import api from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import LOCALSTORAGE_KEYS from "../constants/localstorage";
 
@@ -43,7 +42,6 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
- 
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
     const token =
