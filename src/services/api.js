@@ -4,7 +4,6 @@ const BASE =
 
 let _AUTH_TOKEN = null;
 
-
 export function setToken(token) {
   _AUTH_TOKEN = token;
   try {
@@ -40,18 +39,7 @@ async function request(path, { method = "GET", body = null, raw = false } = {}) 
     body: body !== null && !raw ? JSON.stringify(body) : body,
   };
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-  init.signal = controller.signal;
-
-  let res;
-  try {
-    res = await fetch(url, init);
-  } catch (err) {
-    clearTimeout(timeout);
-    throw new Error("Network error or request timed out");
-  }
-  clearTimeout(timeout);
+  const res = await fetch(url, init);
 
   const text = await res.text();
   let data;
@@ -62,7 +50,7 @@ async function request(path, { method = "GET", body = null, raw = false } = {}) 
   }
 
   if (!res.ok) {
-    const message = (data && (data.message || data.msg)) || res.statusText || "Error en la petición";
+    const message = (data && data.message) || res.statusText || "Error en la petición";
     const err = new Error(message);
     err.response = data;
     err.status = res.status;

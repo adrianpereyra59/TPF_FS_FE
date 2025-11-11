@@ -14,7 +14,6 @@ import LoginPage from "../Pages/LoginPage";
 import RegisterPage from "../Pages/RegisterPage";
 import ForgotPasswordPage from "../Pages/ForgotPasswordPage";
 import ResetPasswordPage from "../Pages/ResetPasswordPage";
-import VerifyEmailPage from "../Pages/VerifyEmailPage";
 
 export default function WhatsAppRouter() {
   return (
@@ -26,10 +25,10 @@ export default function WhatsAppRouter() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-
-              {/* Ruta pública para verificación de email (SPA) */}
-              <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+              <Route
+                path="/reset-password/:token"
+                element={<ResetPasswordPage />}
+              />
 
               <Route
                 path="/"

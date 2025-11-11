@@ -1,9 +1,10 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../services/api";
+import api from "../utils/api"; 
 import { useNavigate } from "react-router-dom";
+import LOCALSTORAGE_KEYS from "../constants/localstorage";
 
 const AuthContext = createContext();
-const AUTH_KEY = "auth_token";
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -11,14 +12,11 @@ export function useAuth() {
 
 function parseJwt(token) {
   try {
-    const parts = token.split(".");
+    const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
+      atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
     );
     return JSON.parse(jsonPayload);
   } catch (e) {
@@ -32,7 +30,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_KEY);
+    const token = localStorage.getItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
     if (token) {
       api.setToken(token);
       const payload = parseJwt(token);
@@ -45,6 +43,7 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+ 
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
     const token =
@@ -54,7 +53,7 @@ export function AuthProvider({ children }) {
       res?.token;
 
     if (token) {
-      localStorage.setItem(AUTH_KEY, token);
+      localStorage.setItem(LOCALSTORAGE_KEYS.AUTH_TOKEN, token);
       api.setToken(token);
       const payload = parseJwt(token);
       setUser(payload ? { id: payload.id, name: payload.name, email: payload.email } : {});
@@ -73,7 +72,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
     api.setToken(null);
     setUser(null);
     navigate("/login");
