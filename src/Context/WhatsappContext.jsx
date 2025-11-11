@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-
 const WhatsappContext = createContext();
 
 export function useWhatsapp() {
   return useContext(WhatsappContext);
+}
+
+
+export function useWhatsApp() {
+  return useWhatsapp();
 }
 
 export function WhatsappProvider({ children }) {
@@ -13,12 +17,15 @@ export function WhatsappProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
 
+
   const fetchContacts = async () => {
+  
     return [];
   };
 
   const getContact = (id) => contacts.find((c) => c.id === id) || null;
   const getMessages = (contactId) => messages.filter((m) => m.contactId === contactId);
+
 
   const fetchMembers = async (groupId) => {
     return [];
@@ -37,19 +44,19 @@ export function WhatsappProvider({ children }) {
   }, []);
 
   const value = {
- 
+
     contacts,
     filteredContacts,
     messages,
     members,
 
-   
+
     setContacts,
     setFilteredContacts,
     setMessages,
     setMembers,
 
- 
+
     fetchContacts,
     getContact,
     getMessages,
