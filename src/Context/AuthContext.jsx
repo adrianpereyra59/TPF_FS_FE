@@ -1,20 +1,29 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../utils/api";
+import api from "../utils/api.js"; 
 import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext();
 const AUTH_KEY = "auth_token";
 
-export function useAuth() { return useContext(AuthContext); }
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 function parseJwt(token) {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
     const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(atob(base64).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
     return JSON.parse(jsonPayload);
-  } catch (e) { return null; }
+  } catch (e) {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }) {
@@ -60,5 +69,9 @@ export function AuthProvider({ children }) {
   const forgotPassword = async (email) => api.post("/auth/forgot-password", { email });
   const resetPassword = async (reset_token, new_password) => api.post("/auth/reset-password", { reset_token, new_password });
 
-  return <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword }}>{!loading ? children : <div>Cargando...</div>}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword }}>
+      {!loading ? children : <div>Cargando...</div>}
+    </AuthContext.Provider>
+  );
 }
