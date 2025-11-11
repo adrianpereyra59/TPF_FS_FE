@@ -1,10 +1,23 @@
 const BASE =
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_APP_URL_API ||
-  "http://localhost:8080";
+  (import.meta.env.VITE_API_URL || import.meta.env.VITE_APP_URL_API || "http://localhost:8080")
+    .replace(/\/$/, "");
+
+let _AUTH_TOKEN = null;
+
+export function setToken(token) {
+  _AUTH_TOKEN = token;
+  try {
+    if (token) {
+      localStorage.setItem("auth_token", token);
+    } else {
+      localStorage.removeItem("auth_token");
+    }
+  } catch (e) {
+  }
+}
 
 async function request(path, { method = "GET", body = null, raw = false } = {}) {
-  const token = localStorage.getItem("auth_token");
+  const token = _AUTH_TOKEN || (typeof localStorage !== "undefined" ? localStorage.getItem("auth_token") : null);
   const headers = {};
 
   if (body !== null && !raw) {
@@ -18,7 +31,7 @@ async function request(path, { method = "GET", body = null, raw = false } = {}) 
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const url = `${BASE.replace(/\/$/, "")}/api${path.startsWith("/") ? path : "/" + path}`;
+  const url = `${BASE}/api${path.startsWith("/") ? path : "/" + path}`;
 
   const init = {
     method,
@@ -69,4 +82,5 @@ export default {
   post,
   put,
   del,
+  setToken,
 };

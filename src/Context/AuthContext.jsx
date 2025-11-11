@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../utils/api";
+import api from "../utils/api"; 
 import { useNavigate } from "react-router-dom";
 import LOCALSTORAGE_KEYS from "../constants/localstorage";
 
@@ -42,9 +43,15 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+ 
   const login = async (email, password) => {
-    const res = await api.post("/api/auth/login", { email, password });
-    const token = res?.data?.authorization_token || res?.authorization_token || res?.token;
+    const res = await api.post("/auth/login", { email, password });
+    const token =
+      res?.data?.authorization_token ||
+      res?.data?.token ||
+      res?.authorization_token ||
+      res?.token;
+
     if (token) {
       localStorage.setItem(LOCALSTORAGE_KEYS.AUTH_TOKEN, token);
       api.setToken(token);
@@ -55,13 +62,12 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (payload) => {
-
     const body = {
       username: payload.name || payload.username || payload.email,
       email: payload.email,
       password: payload.password,
     };
-    const res = await api.post("/api/auth/register", body);
+    const res = await api.post("/auth/register", body);
     return res;
   };
 
@@ -72,9 +78,8 @@ export function AuthProvider({ children }) {
     navigate("/login");
   };
 
-
-  const forgotPassword = async (email) => api.post("/api/auth/forgot-password", { email });
-  const resetPassword = async (token, password) => api.post("/api/auth/reset-password", { reset_token: token, new_password: password });
+  const forgotPassword = async (email) => api.post("/auth/forgot-password", { email });
+  const resetPassword = async (reset_token, new_password) => api.post("/auth/reset-password", { reset_token, new_password });
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword }}>
