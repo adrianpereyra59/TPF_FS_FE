@@ -5,8 +5,7 @@ import api from "../utils/api";
 export default function VerifyEmailPage() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState("loading"); // loading|success|error
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("loading"); 
 
   useEffect(() => {
     if (!token) {

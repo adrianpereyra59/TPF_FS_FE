@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../utils/api";
+import api from "../services/api";
 import { useNavigate } from "react-router-dom";
-import LOCALSTORAGE_KEYS from "../constants/localstorage";
 
 const AuthContext = createContext();
+const AUTH_KEY = "auth_token";
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -11,11 +11,14 @@ export function useAuth() {
 
 function parseJwt(token) {
   try {
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
     const jsonPayload = decodeURIComponent(
-      atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
     );
     return JSON.parse(jsonPayload);
   } catch (e) {
@@ -29,7 +32,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
+    const token = localStorage.getItem(AUTH_KEY);
     if (token) {
       api.setToken(token);
       const payload = parseJwt(token);
@@ -51,7 +54,7 @@ export function AuthProvider({ children }) {
       res?.token;
 
     if (token) {
-      localStorage.setItem(LOCALSTORAGE_KEYS.AUTH_TOKEN, token);
+      localStorage.setItem(AUTH_KEY, token);
       api.setToken(token);
       const payload = parseJwt(token);
       setUser(payload ? { id: payload.id, name: payload.name, email: payload.email } : {});
@@ -70,7 +73,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem(LOCALSTORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(AUTH_KEY);
     api.setToken(null);
     setUser(null);
     navigate("/login");
