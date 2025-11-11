@@ -14,21 +14,21 @@ import LoginPage from "../Pages/LoginPage";
 import RegisterPage from "../Pages/RegisterPage";
 import ForgotPasswordPage from "../Pages/ForgotPasswordPage";
 import ResetPasswordPage from "../Pages/ResetPasswordPage";
+import VerifyEmailPage from "../Pages/VerifyEmailPage";
 
 export default function WhatsAppRouter() {
   return (
-    <AuthProvider>
-      <WhatsAppProvider>
-        <Router>
+    <Router>
+      <AuthProvider>
+        <WhatsAppProvider>
           <div className="whatsapp-app">
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route
-                path="/reset-password/:token"
-                element={<ResetPasswordPage />}
-              />
+              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+
+              <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
               <Route
                 path="/"
@@ -64,8 +64,8 @@ export default function WhatsAppRouter() {
               />
             </Routes>
           </div>
-        </Router>
-      </WhatsAppProvider>
-    </AuthProvider>
+        </WhatsAppProvider>
+      </AuthProvider>
+    </Router>
   );
 }
