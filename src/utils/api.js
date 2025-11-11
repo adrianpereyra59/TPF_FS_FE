@@ -1,5 +1,4 @@
-// src/utils/api.js
-// API wrapper para el frontend (Vite)
+
 const BASE = (import.meta.env.VITE_API_URL || "https://tpf-fs-be.vercel.app").replace(/\/$/, "");
 
 let _AUTH_TOKEN = null;
@@ -10,7 +9,7 @@ export function setToken(token) {
     if (token) localStorage.setItem("auth_token", token);
     else localStorage.removeItem("auth_token");
   } catch (e) {
-    // ignore (SSR or privacy mode)
+
   }
 }
 
