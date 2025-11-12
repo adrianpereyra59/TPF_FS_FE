@@ -1,4 +1,4 @@
-const BASE = (import.meta.env.VITE_API_URL || "https://tpf-fs-be.vercel.app").replace(/\/$/, "");
+const BASE = (import.meta.env.VITE_API_URL || "https://pw-be-be.vercel.app").replace(/\/$/, "");
 
 let _AUTH_TOKEN = null;
 

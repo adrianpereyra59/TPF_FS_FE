@@ -19,7 +19,7 @@ export default function VerifyEmailPage() {
           await api.post("/auth/verify-email", { verification_token: token });
         } catch (e) {
           // si POST no existe, fallback a GET directamente contra el backend
-          const base = (import.meta.env.VITE_API_URL || "https://tpf-fs-be.vercel.app").replace(/\/$/, "");
+          const base = (import.meta.env.VITE_API_URL || "https://pw-be-be.vercel.app").replace(/\/$/, "");
           const res = await fetch(`${base}/api/auth/verify-email/${token}`, { method: "GET", redirect: "follow" });
           if (!res.ok) throw new Error("Verificación fallida");
         }
