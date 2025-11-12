@@ -1,135 +1,87 @@
-import React, { useState } from "react";
-import { useAuth } from "../Context/AuthContext";
+import React, { useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
+import { useAuth } from "../Context/AuthContext"
 
 export default function RegisterPage() {
-  const { register } = useAuth();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null); // { type: 'success'|'error'|'info', text, extra? }
-  const [verificationLink, setVerificationLink] = useState(null);
+    const { register } = useAuth()
+    const navigate = useNavigate()
+    const [name, setName] = useState("")
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [error, setError] = useState(null)
+    const [success, setSuccess] = useState(null)
+    const [verificationLink, setVerificationLink] = useState(null)
+    const [loading, setLoading] = useState(false)
 
-  const onChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        setError(null)
+        setSuccess(null)
+        setVerificationLink(null)
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setMessage(null);
-    setVerificationLink(null);
+        setLoading(true)
+        try {
+            // register es async en el AuthContext; esperamos su respuesta
+            const res = await register({ name, email, password })
 
-    // Validaciones básicas
-    if (!form.name || !form.email || !form.password) {
-      setMessage({ type: "error", text: "Completa todos los campos." });
-      return;
+            // Mostrar mensaje de éxito sin alterar el estilo original
+            setSuccess(`Registro exitoso. Se envió un correo de verificación a ${email}. Revisa tu bandeja de entrada (y spam).`)
+
+            // Si el backend devuelve verificationLink (modo dev), lo mostramos para pruebas
+            const link =
+                res?.data?.verificationLink ||
+                res?.verificationLink ||
+                res?.data?.data?.verificationLink ||
+                null
+            if (link) setVerificationLink(link)
+
+            // Redirigir al login después de un pequeño delay para que el usuario vea el mensaje
+            setTimeout(() => navigate("/login"), 900)
+        } catch (err) {
+            // Extraer mensaje de error del wrapper API o error genérico
+            const text =
+                err?.response?.message ||
+                err?.response?.msg ||
+                err?.message ||
+                "Ocurrió un error al registrar. Intenta nuevamente."
+            setError(text)
+            setSuccess(null)
+        } finally {
+            setLoading(false)
+        }
     }
-    if (form.password.length < 8) {
-      setMessage({ type: "error", text: "La contraseña debe tener al menos 8 caracteres." });
-      return;
-    }
 
-    setLoading(true);
-    try {
-      const res = await register({ name: form.name, email: form.email, password: form.password });
+    return (
+        <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+            <div style={{ width: 480, maxWidth: "100%", background: "var(--surface-color,#fff)", borderRadius: 8, padding: "1.25rem", boxShadow: "var(--shadow-md, 0 2px 8px rgba(0,0,0,0.08))" }}>
+                <h2 style={{ marginBottom: ".5rem" }}>Registro</h2>
+                <p style={{ marginTop: 0, color: "var(--text-secondary,#667781)" }}>Crea una cuenta para acceder al chat</p>
 
-      // Si el backend responde OK:
-      setMessage({
-        type: "success",
-        text: `Registro exitoso. Se envió un correo de verificación a ${form.email}. Revisa tu bandeja de entrada (y la carpeta de spam).`,
-      });
+                <form onSubmit={handleSubmit} style={{ display: "grid", gap: ".75rem", marginTop: "1rem" }}>
+                    <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6 }} />
+                    <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6 }} />
+                    <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6 }} />
 
-      // Si el backend incluye verificationLink en data (útil en dev) lo mostramos
-      const link =
-        res?.data?.verificationLink ||
-        res?.verificationLink ||
-        res?.data?.data?.verificationLink; // intentos por si la estructura cambia
-      if (link) {
-        setVerificationLink(link);
-      }
+                    {error && <div style={{ color: "crimson" }}>{error}</div>}
+                    {success && <div style={{ color: "green" }}>{success}</div>}
 
-      // Limpiar formulario opcionalmente:
-      setForm({ name: "", email: "", password: "" });
-    } catch (err) {
-      // err es Error con message y, si el api wrapper añadió err.response, puede haber más info
-      const text =
-        err?.response?.message ||
-        err?.response?.msg ||
-        err?.message ||
-        "Ocurrió un error al registrar. Intenta nuevamente.";
-      setMessage({ type: "error", text });
-    } finally {
-      setLoading(false);
-    }
-  };
+                    {verificationLink && (
+                        <div style={{ marginTop: 8 }}>
+                            <strong style={{ display: "block", marginBottom: 6 }}>Link de verificación (modo debug):</strong>
+                            <a href={verificationLink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary-color,#25d366)", wordBreak: "break-all" }}>
+                                {verificationLink}
+                            </a>
+                        </div>
+                    )}
 
-  return (
-    <div style={{ maxWidth: 520, margin: "40px auto", padding: 16 }}>
-      <h2>Registro</h2>
-
-      {message && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "10px 12px",
-            borderRadius: 6,
-            background: message.type === "success" ? "#ecfdf5" : "#fff1f2",
-            color: message.type === "success" ? "#064e3b" : "#9f1239",
-            border: message.type === "success" ? "1px solid #10b98133" : "1px solid #fb718533",
-          }}
-        >
-          {message.text}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: ".5rem" }}>
+                        <button type="submit" className="btn primary" disabled={loading}>
+                            {loading ? "Registrando..." : "Registrarme"}
+                        </button>
+                        <Link to="/login" style={{ color: "var(--primary-color,#25d366)" }}>Ir a iniciar sesión</Link>
+                    </div>
+                </form>
+            </div>
         </div>
-      )}
-
-      {verificationLink && (
-        <div style={{ marginBottom: 12 }}>
-          <strong>Link de verificación (modo debug):</strong>
-          <div>
-            <a href={verificationLink} target="_blank" rel="noopener noreferrer">
-              {verificationLink}
-            </a>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={onSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <label>Nombre</label>
-          <input
-            name="name"
-            value={form.name}
-            onChange={onChange}
-            placeholder="Tu nombre"
-            style={{ width: "100%", padding: 8, marginTop: 4 }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-          <label>Email</label>
-          <input
-            name="email"
-            value={form.email}
-            onChange={onChange}
-            placeholder="tu@correo.com"
-            style={{ width: "100%", padding: 8, marginTop: 4 }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label>Contraseña</label>
-          <input
-            name="password"
-            value={form.password}
-            onChange={onChange}
-            placeholder="Contraseña (min. 8 caracteres)"
-            type="password"
-            style={{ width: "100%", padding: 8, marginTop: 4 }}
-          />
-        </div>
-
-        <button type="submit" disabled={loading} style={{ padding: "10px 16px" }}>
-          {loading ? "Registrando..." : "Registrarme"}
-        </button>
-      </form>
-    </div>
-  );
+    )
 }
