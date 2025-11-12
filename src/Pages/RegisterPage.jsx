@@ -19,15 +19,25 @@ export default function RegisterPage() {
         setSuccess(null)
         setVerificationLink(null)
 
+        // validaciones mínimas
+        if (!name || !email || !password) {
+            setError("Completa todos los campos.")
+            return
+        }
+        if (password.length < 8) {
+            setError("La contraseña debe tener al menos 8 caracteres.")
+            return
+        }
+
         setLoading(true)
         try {
-            // register es async en el AuthContext; esperamos su respuesta
+            // Esperamos la promesa del contexto
             const res = await register({ name, email, password })
 
-            // Mostrar mensaje de éxito sin alterar el estilo original
+            // Mensaje que solicita el usuario: informar que se envió correo de verificación
             setSuccess(`Registro exitoso. Se envió un correo de verificación a ${email}. Revisa tu bandeja de entrada (y spam).`)
 
-            // Si el backend devuelve verificationLink (modo dev), lo mostramos para pruebas
+            // Si en dev el backend devuelve el link, lo mostramos (solo texto, sin romper estilos)
             const link =
                 res?.data?.verificationLink ||
                 res?.verificationLink ||
@@ -35,10 +45,10 @@ export default function RegisterPage() {
                 null
             if (link) setVerificationLink(link)
 
-            // Redirigir al login después de un pequeño delay para que el usuario vea el mensaje
+            // Redirigir al login tras un pequeño delay para que el usuario vea el mensaje
             setTimeout(() => navigate("/login"), 900)
         } catch (err) {
-            // Extraer mensaje de error del wrapper API o error genérico
+            // Extraer mensaje del wrapper API o fallback
             const text =
                 err?.response?.message ||
                 err?.response?.msg ||
@@ -58,9 +68,9 @@ export default function RegisterPage() {
                 <p style={{ marginTop: 0, color: "var(--text-secondary,#667781)" }}>Crea una cuenta para acceder al chat</p>
 
                 <form onSubmit={handleSubmit} style={{ display: "grid", gap: ".75rem", marginTop: "1rem" }}>
-                    <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6 }} />
-                    <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6 }} />
-                    <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6 }} />
+                    <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6, border: "1px solid var(--border-color,#e9edef)" }} />
+                    <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6, border: "1px solid var(--border-color,#e9edef)" }} />
+                    <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6, border: "1px solid var(--border-color,#e9edef)" }} />
 
                     {error && <div style={{ color: "crimson" }}>{error}</div>}
                     {success && <div style={{ color: "green" }}>{success}</div>}
