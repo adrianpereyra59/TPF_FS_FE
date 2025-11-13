@@ -1,16 +1,11 @@
+// Reemplaza el existente en src/Context/WhatsappContext.jsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "../utils/api.js";
 import { useAuth } from "./AuthContext";
 
 const WhatsappContext = createContext();
-
-export function useWhatsapp() {
-  return useContext(WhatsappContext);
-}
-
-export function useWhatsApp() {
-  return useWhatsapp();
-}
+export function useWhatsapp() { return useContext(WhatsappContext); }
+export function useWhatsApp() { return useWhatsapp(); }
 
 function idOf(obj) {
   if (!obj && obj !== 0) return obj;
@@ -19,12 +14,11 @@ function idOf(obj) {
 }
 
 export function WhatsappProvider({ children }) {
-  const { user } = useAuth(); 
-  const [groups, setGroups] = useState([]); 
-  const [contacts, setContacts] = useState([]); 
+  const { user } = useAuth();
+  const [groups, setGroups] = useState([]);
+  const [contacts, setContacts] = useState([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
-
 
   const fetchGroups = useCallback(async () => {
     setLoadingGroups(true);
@@ -34,6 +28,12 @@ export function WhatsappProvider({ children }) {
       setGroups(arr);
       return { success: true, data: arr };
     } catch (err) {
+      // Tratar 404 como "no hay grupos" (backend no implementó endpoint)
+      if (err && (err.status === 404 || /404/.test(String(err.message)))) {
+        console.info("fetchGroups: endpoint /api/groups no encontrado (404). Se asume lista vacía.");
+        setGroups([]);
+        return { success: true, data: [] };
+      }
       console.error("WhatsappContext.fetchGroups error:", err);
       return { success: false, message: err?.message || "Error fetching groups" };
     } finally {
@@ -49,7 +49,11 @@ export function WhatsappProvider({ children }) {
       setContacts(arr);
       return { success: true, data: arr };
     } catch (err) {
-      console.warn("WhatsappContext.fetchContacts warning (endpoint optional):", err.message || err);
+      if (err && (err.status === 404 || /404/.test(String(err.message)))) {
+        console.info("fetchContacts: endpoint /api/contacts no encontrado (404). Manteniendo contactos locales.");
+        return { success: true, data: [] };
+      }
+      console.warn("WhatsappContext.fetchContacts warning (endpoint optional):", err?.message || err);
       return { success: false, message: err?.message || "Error fetching contacts" };
     } finally {
       setLoadingContacts(false);
@@ -57,13 +61,11 @@ export function WhatsappProvider({ children }) {
   }, []);
 
   const getGroups = () => groups;
-
   const getGroupById = (groupId) => {
     if (!groupId) return null;
     const id = String(groupId);
-    return groups.find((g) => idOf(g) === id || idOf(g) === String(id)) || null;
+    return groups.find((g) => idOf(g) === id) || null;
   };
-
 
   const createGroup = async ({ name, members = [], channels = [] }) => {
     try {
@@ -100,7 +102,6 @@ export function WhatsappProvider({ children }) {
     }
   };
 
-
   const addMemberToGroup = async (groupId, memberId) => {
     try {
       const res = await api.post(`/groups/${groupId}/members`, { memberId });
@@ -119,9 +120,7 @@ export function WhatsappProvider({ children }) {
       setGroups((prev) =>
         prev.map((g) => {
           if (idOf(g) !== String(groupId)) return g;
-          const members = Array.isArray(g.members)
-            ? g.members.filter((m) => idOf(m) !== String(memberId))
-            : [];
+          const members = Array.isArray(g.members) ? g.members.filter((m) => idOf(m) !== String(memberId)) : [];
           return { ...g, members };
         })
       );
@@ -157,7 +156,6 @@ export function WhatsappProvider({ children }) {
 
   const declineInvitation = async (invitationId) => {
     try {
-
       try {
         const res = await api.post(`/invitations/${invitationId}/decline`);
         await fetchGroups();
@@ -185,7 +183,6 @@ export function WhatsappProvider({ children }) {
     }
   };
 
-
   const getPendingInvitationsForGroup = (groupId) => {
     const g = getGroupById(groupId);
     if (!g) return [];
@@ -203,7 +200,6 @@ export function WhatsappProvider({ children }) {
     if (!g) return {};
     return g.roles || {};
   };
-
 
   const fetchMessagesForChannel = async (groupId, channelId) => {
     try {
@@ -227,7 +223,6 @@ export function WhatsappProvider({ children }) {
     }
   };
 
-
   useEffect(() => {
     if (user) {
       fetchGroups();
@@ -236,6 +231,7 @@ export function WhatsappProvider({ children }) {
       setGroups([]);
       setContacts([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const value = {
@@ -243,7 +239,6 @@ export function WhatsappProvider({ children }) {
     contacts,
     loadingGroups,
     loadingContacts,
-
     fetchGroups,
     fetchContacts,
     createGroup,
@@ -262,7 +257,6 @@ export function WhatsappProvider({ children }) {
     getGroupRoles,
     fetchMessagesForChannel,
     addGroupMessage,
-
     currentUser: user,
     apiBase: api.BASE,
   };
@@ -270,8 +264,5 @@ export function WhatsappProvider({ children }) {
   return <WhatsappContext.Provider value={value}>{children}</WhatsappContext.Provider>;
 }
 
-export function WhatsAppProvider(props) {
-  return <WhatsappProvider {...props} />;
-}
-
+export function WhatsAppProvider(props) { return <WhatsappProvider {...props} />; }
 export default WhatsappProvider;
