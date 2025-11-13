@@ -34,28 +34,40 @@ export function AuthProvider({ children }) {
     if (token) {
       api.setToken(token);
       const payload = parseJwt(token);
-      if (payload) setUser({ id: payload.id, name: payload.name, email: payload.email });
+      if (payload) setUser({ id: payload.id || payload.user_id, name: payload.name || payload.username, email: payload.email });
       else setUser(null);
     }
     setLoading(false);
   }, []);
 
   const login = async (email, password) => {
-    const res = await api.post("/auth/login", { email, password });
-    const token = res?.data?.authorization_token || res?.authorization_token || res?.token || res?.data?.token;
-    if (token) {
-      localStorage.setItem(AUTH_KEY, token);
-      api.setToken(token);
-      const payload = parseJwt(token);
-      setUser(payload ? { id: payload.id, name: payload.name, email: payload.email } : {});
+    try {
+      const res = await api.post("/api/auth/login", { email, password });
+      const token = res?.data?.authorization_token || res?.authorization_token || res?.token || res?.data?.token;
+      if (token) {
+        localStorage.setItem(AUTH_KEY, token);
+        api.setToken(token);
+        const payload = parseJwt(token);
+        setUser(payload ? { id: payload.id || payload.user_id, name: payload.name || payload.username, email: payload.email } : {});
+      }
+      return res;
+    } catch (err) {
+      // lanzar error con body del servidor si existe
+      const message = err?.response?.message || err?.message || "Login failed";
+      throw new Error(message);
     }
-    return res;
   };
 
   const register = async ({ name, email, password }) => {
-    const body = { username: name || email, email, password };
-    const res = await api.post("/auth/register", body);
-    return res;
+    try {
+      // backend expects username/email/password
+      const body = { username: name || email, email, password };
+      const res = await api.post("/api/auth/register", body);
+      return res;
+    } catch (err) {
+      const message = err?.response?.message || err?.message || "Register failed";
+      throw new Error(message);
+    }
   };
 
   const logout = () => {
@@ -65,18 +77,28 @@ export function AuthProvider({ children }) {
   };
 
   const sendResetEmail = async (email) => {
-    const res = await api.post("/auth/forgot-password", { email });
-    return res;
+    try {
+      const res = await api.post("/api/auth/forgot-password", { email });
+      return res;
+    } catch (err) {
+      const message = err?.response?.message || err?.message || "Error sending reset email";
+      throw new Error(message);
+    }
   };
 
   const resetPassword = async (reset_token, new_password) => {
-    const res = await api.post("/auth/reset-password", { reset_token, new_password });
-    return res;
+    try {
+      const res = await api.post("/api/auth/reset-password", { reset_token, new_password });
+      return res;
+    } catch (err) {
+      const message = err?.response?.message || err?.message || "Error resetting password";
+      throw new Error(message);
+    }
   };
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, sendResetEmail, resetPassword }}>
-      {!loading ? children : <div>Cargando...</div>}
+      {!loading ? children : <div>Loading...</div>}
     </AuthContext.Provider>
   );
 }
