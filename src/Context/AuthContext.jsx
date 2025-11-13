@@ -52,7 +52,6 @@ export function AuthProvider({ children }) {
       }
       return res;
     } catch (err) {
-      // lanzar error con body del servidor si existe
       const message = err?.response?.message || err?.message || "Login failed";
       throw new Error(message);
     }
@@ -60,7 +59,7 @@ export function AuthProvider({ children }) {
 
   const register = async ({ name, email, password }) => {
     try {
-      // backend expects username/email/password
+      // backend espera { username, email, password }
       const body = { username: name || email, email, password };
       const res = await api.post("/api/auth/register", body);
       return res;

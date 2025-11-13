@@ -1,6 +1,6 @@
 // src/utils/api.js
 const RAW_BASE = import.meta.env.VITE_API_URL || "https://pwa-be-tpf.vercel.app";
-const BASE = RAW_BASE.replace(/\/$/, ""); // no trailing slash
+const BASE = RAW_BASE.replace(/\/$/, ""); // sin slash final
 
 let _AUTH_TOKEN = null;
 
@@ -17,14 +17,10 @@ export function setToken(token) {
 }
 
 function buildUrl(path) {
-  // If path already looks like a full URL, return it untouched
+  // Si ya es URL absoluta, retornar tal cual
   if (/^https?:\/\//.test(path)) return path;
-  // If the path already begins with "/api", avoid adding an extra /api
-  // The backend uses endpoints like /api/auth/..., so accept both "/api/..." and "/auth/..."
-  if (path.startsWith("/")) {
-    // prefer BASE + path
-    return `${BASE}${path}`;
-  }
+  // Soportar rutas que comiencen con / o sin /
+  if (path.startsWith("/")) return `${BASE}${path}`;
   return `${BASE}/${path}`;
 }
 
@@ -37,9 +33,8 @@ async function request(path, { method = "GET", body = null, raw = false, headers
   const url = buildUrl(path);
   const init = { method, headers, body: body !== null && !raw ? JSON.stringify(body) : body };
 
-  // small debug logging in dev mode
-  const isDev = import.meta.env.DEV;
-  if (isDev) {
+  // Debug logging en desarrollo
+  if (import.meta.env.DEV) {
     console.info("[api] REQUEST", method, url, body ? body : "");
   }
 
@@ -61,18 +56,17 @@ async function request(path, { method = "GET", body = null, raw = false, headers
   }
 
   if (!res.ok) {
-    // extract a useful error message if server provided
     const message = (data && (data.message || data.msg || data.error)) || res.statusText || "Error en la petición";
     const err = new Error(message);
     err.status = res.status;
     err.response = data;
-    if (isDev) {
+    if (import.meta.env.DEV) {
       console.error("[api] ERROR RESPONSE", { url, status: res.status, body: data });
     }
     throw err;
   }
 
-  if (isDev) {
+  if (import.meta.env.DEV) {
     console.info("[api] RESPONSE", { url, status: res.status, data });
   }
   return data;

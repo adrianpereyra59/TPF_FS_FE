@@ -1,90 +1,103 @@
-// Reemplaza src/Pages/RegisterPage.jsx por este (mejor extracción de error)
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import api from "../utils/api.js";
 
-export default function RegisterPage() {
-  const { register } = useAuth();
-  const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [verificationLink, setVerificationLink] = useState(null);
-  const [loading, setLoading] = useState(false);
+const AuthContext = createContext();
+const AUTH_KEY = "auth_token";
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setVerificationLink(null);
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
-    if (!name || !email || !password) {
-      setError("Completa todos los campos.");
-      return;
+function parseJwt(token) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem(AUTH_KEY);
+    if (token) {
+      api.setToken(token);
+      const payload = parseJwt(token);
+      if (payload) setUser({ id: payload.id || payload.user_id, name: payload.name || payload.username, email: payload.email });
+      else setUser(null);
     }
-    if (password.length < 8) {
-      setError("La contraseña debe tener al menos 8 caracteres.");
-      return;
-    }
+    setLoading(false);
+  }, []);
 
-    setLoading(true);
+  const login = async (email, password) => {
     try {
-      const res = await register({ name, email, password });
-      setSuccess(`Registro exitoso. Se envió un correo de verificación a ${email}. Revisa tu bandeja de entrada (y spam).`);
-
-      const link = res?.data?.verificationLink || res?.verificationLink || res?.data?.data?.verificationLink || null;
-      if (link) setVerificationLink(link);
-
-      setTimeout(() => navigate("/login"), 900);
-    } catch (err) {
-      // extraer mensaje devuelto por el backend
-      let text = "Ocurrió un error al registrar. Intenta nuevamente.";
-      if (err) {
-        if (err?.response?.message) text = err.response.message;
-        else if (err?.response?.msg) text = err.response.msg;
-        else if (err?.message) text = err.message;
-        else if (typeof err === "string") text = err;
+      const res = await api.post("/api/auth/login", { email, password });
+      const token = res?.data?.authorization_token || res?.authorization_token || res?.token || res?.data?.token;
+      if (token) {
+        localStorage.setItem(AUTH_KEY, token);
+        api.setToken(token);
+        const payload = parseJwt(token);
+        setUser(payload ? { id: payload.id || payload.user_id, name: payload.name || payload.username, email: payload.email } : {});
       }
-      setError(text);
-      setSuccess(null);
-    } finally {
-      setLoading(false);
+      return res;
+    } catch (err) {
+      const message = err?.response?.message || err?.message || "Login failed";
+      throw new Error(message);
+    }
+  };
+
+  const register = async ({ name, email, password }) => {
+    try {
+      // backend espera { username, email, password }
+      const body = { username: name || email, email, password };
+      const res = await api.post("/api/auth/register", body);
+      return res;
+    } catch (err) {
+      const message = err?.response?.message || err?.message || "Register failed";
+      throw new Error(message);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem(AUTH_KEY);
+    api.setToken(null);
+    setUser(null);
+  };
+
+  const sendResetEmail = async (email) => {
+    try {
+      const res = await api.post("/api/auth/forgot-password", { email });
+      return res;
+    } catch (err) {
+      const message = err?.response?.message || err?.message || "Error sending reset email";
+      throw new Error(message);
+    }
+  };
+
+  const resetPassword = async (reset_token, new_password) => {
+    try {
+      const res = await api.post("/api/auth/reset-password", { reset_token, new_password });
+      return res;
+    } catch (err) {
+      const message = err?.response?.message || err?.message || "Error resetting password";
+      throw new Error(message);
     }
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-      <div style={{ width: 480, maxWidth: "100%", background: "var(--surface-color,#fff)", borderRadius: 8, padding: "1.25rem", boxShadow: "var(--shadow-md, 0 2px 8px rgba(0,0,0,0.08))" }}>
-        <h2 style={{ marginBottom: ".5rem" }}>Registro</h2>
-        <p style={{ marginTop: 0, color: "var(--text-secondary,#667781)" }}>Crea una cuenta para acceder al chat</p>
-
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: ".75rem", marginTop: "1rem" }}>
-          <input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6, border: "1px solid var(--border-color,#e9edef)" }} />
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6, border: "1px solid var(--border-color,#e9edef)" }} />
-          <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: ".5rem", borderRadius: 6, border: "1px solid var(--border-color,#e9edef)" }} />
-
-          {error && <div style={{ color: "crimson" }}>{error}</div>}
-          {success && <div style={{ color: "green" }}>{success}</div>}
-
-          {verificationLink && (
-            <div style={{ marginTop: 8 }}>
-              <strong style={{ display: "block", marginBottom: 6 }}>Link de verificación (modo debug):</strong>
-              <a href={verificationLink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary-color,#25d366)", wordBreak: "break-all" }}>
-                {verificationLink}
-              </a>
-            </div>
-          )}
-
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: ".5rem" }}>
-            <button type="submit" className="btn primary" disabled={loading}>
-              {loading ? "Registrando..." : "Registrarme"}
-            </button>
-            <Link to="/login" style={{ color: "var(--primary-color,#25d366)" }}>Ir a iniciar sesión</Link>
-          </div>
-        </form>
-      </div>
-    </div>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, sendResetEmail, resetPassword }}>
+      {!loading ? children : <div>Loading...</div>}
+    </AuthContext.Provider>
   );
 }
