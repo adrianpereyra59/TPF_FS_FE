@@ -57,15 +57,19 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // register: accepts { name, email, password } and maps to backend expected { username, email, password }
   const register = async ({ name, email, password }) => {
     try {
-      // backend espera { username, email, password }
       const body = { username: name || email, email, password };
       const res = await api.post("/api/auth/register", body);
       return res;
     } catch (err) {
+      // preserve server response if present
       const message = err?.response?.message || err?.message || "Register failed";
-      throw new Error(message);
+      const e = new Error(message);
+      e.response = err?.response;
+      e.status = err?.status;
+      throw e;
     }
   };
 

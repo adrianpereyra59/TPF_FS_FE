@@ -1,4 +1,5 @@
 // src/utils/api.js
+// Wrapper fetch simple y robusto, con logging en DEV
 const RAW_BASE = import.meta.env.VITE_API_URL || "https://pwa-be-tpf.vercel.app";
 const BASE = RAW_BASE.replace(/\/$/, ""); // sin slash final
 
@@ -17,9 +18,7 @@ export function setToken(token) {
 }
 
 function buildUrl(path) {
-  // Si ya es URL absoluta, retornar tal cual
   if (/^https?:\/\//.test(path)) return path;
-  // Soportar rutas que comiencen con / o sin /
   if (path.startsWith("/")) return `${BASE}${path}`;
   return `${BASE}/${path}`;
 }
@@ -33,9 +32,10 @@ async function request(path, { method = "GET", body = null, raw = false, headers
   const url = buildUrl(path);
   const init = { method, headers, body: body !== null && !raw ? JSON.stringify(body) : body };
 
-  // Debug logging en desarrollo
   if (import.meta.env.DEV) {
-    console.info("[api] REQUEST", method, url, body ? body : "");
+    try {
+      console.info("[api] REQUEST", method, url, body ? body : "");
+    } catch (e) {}
   }
 
   let res;
