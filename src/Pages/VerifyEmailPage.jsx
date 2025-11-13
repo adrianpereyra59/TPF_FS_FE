@@ -1,42 +1,47 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import api from "../utils/api";
+import { useParams } from "react-router-dom";
+import api from "../utils/api.js";
 
 export default function VerifyEmailPage() {
   const { token } = useParams();
-  const navigate = useNavigate();
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!token) { setStatus("error"); setMessage("Token no provisto."); return; }
+    if (!token) {
+      setStatus("error");
+      setMessage("Token no provisto.");
+      return;
+    }
+
     const verify = async () => {
       setStatus("loading");
       try {
-        // Llamamos al endpoint POST de verificación (si lo tienes) o simplemente abrimos GET en backend.
-        // Usamos POST /auth/verify-email si lo expones; si no, la apertura directa del enlace al backend GET también funciona.
         try {
-          await api.post("/auth/verify-email", { verification_token: token });
+          await api.get(`/auth/verify-email/${token}`);
         } catch (e) {
-          // si POST no existe, fallback a GET directamente contra el backend
-          const base = (import.meta.env.VITE_API_URL || "https://pw-be-be.vercel.app").replace(/\/$/, "");
-          const res = await fetch(`${base}/api/auth/verify-email/${token}`, { method: "GET", redirect: "follow" });
-          if (!res.ok) throw new Error("Verificación fallida");
+          try {
+            await api.post("/auth/verify-email", { verification_token: token });
+          } catch (err) {
+            throw err;
+          }
         }
 
         setStatus("success");
         setMessage("Correo verificado. Serás redirigido al inicio de sesión...");
         setTimeout(() => {
-          const FRONT = import.meta.env.VITE_FRONTEND_URL || "https://tpf-fs-fe.vercel.app";
+          const FRONT = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
           window.location.href = `${FRONT.replace(/\/$/, "")}/login?verified=1`;
         }, 1500);
       } catch (err) {
+        console.error("verify email error", err);
         setStatus("error");
         setMessage(err?.message || "Error al verificar el correo.");
       }
     };
+
     verify();
-  }, [token, navigate]);
+  }, [token]);
 
   return (
     <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center" }}>

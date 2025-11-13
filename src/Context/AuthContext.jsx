@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../utils/api.js"; 
-import { useNavigate } from "react-router-dom";
+import api from "../utils/api.js";
 
 const AuthContext = createContext();
 const AUTH_KEY = "auth_token";
@@ -27,7 +26,6 @@ function parseJwt(token) {
 }
 
 export function AuthProvider({ children }) {
-  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +42,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await api.post("/auth/login", { email, password });
-    const token = res?.data?.authorization_token || res?.authorization_token || res?.token;
+    const token = res?.data?.authorization_token || res?.authorization_token || res?.token || res?.data?.token;
     if (token) {
       localStorage.setItem(AUTH_KEY, token);
       api.setToken(token);
@@ -54,23 +52,30 @@ export function AuthProvider({ children }) {
     return res;
   };
 
-  const register = async (payload) => {
-    const body = { username: payload.name || payload.username || payload.email, email: payload.email, password: payload.password };
-    return await api.post("/auth/register", body);
+  const register = async ({ name, email, password }) => {
+    const body = { username: name || email, email, password };
+    const res = await api.post("/auth/register", body);
+    return res;
   };
 
   const logout = () => {
     localStorage.removeItem(AUTH_KEY);
     api.setToken(null);
     setUser(null);
-    navigate("/login");
   };
 
-  const forgotPassword = async (email) => api.post("/auth/forgot-password", { email });
-  const resetPassword = async (reset_token, new_password) => api.post("/auth/reset-password", { reset_token, new_password });
+  const sendResetEmail = async (email) => {
+    const res = await api.post("/auth/forgot-password", { email });
+    return res;
+  };
+
+  const resetPassword = async (reset_token, new_password) => {
+    const res = await api.post("/auth/reset-password", { reset_token, new_password });
+    return res;
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, sendResetEmail, resetPassword }}>
       {!loading ? children : <div>Cargando...</div>}
     </AuthContext.Provider>
   );
